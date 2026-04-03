@@ -187,9 +187,25 @@ function setStatus(t){
     if(dismiss)dismiss.style.display=(!transient && !S.busy)?'inline':'none';
   }
 }
+function updateSendBtn(){
+  const btn=$('btnSend');
+  if(!btn) return;
+  const hasContent=$('msg').value.trim().length>0||S.pendingFiles.length>0;
+  const shouldShow=hasContent&&!S.busy;
+  if(shouldShow&&btn.style.display==='none'){
+    btn.style.display='';
+    // Remove then re-add class to retrigger animation each time
+    btn.classList.remove('visible');
+    requestAnimationFrame(()=>btn.classList.add('visible'));
+  } else if(!shouldShow&&btn.style.display!=='none'){
+    btn.style.display='none';
+    btn.classList.remove('visible');
+  }
+}
 function setBusy(v){
   S.busy=v;
   $('btnSend').disabled=v;
+  updateSendBtn();
   const dots=$('activityDots');
   if(dots) dots.style.display=v?'flex':'none';
   if(!v){
@@ -920,8 +936,9 @@ async function promptNewFolder(){
 
 function renderTray(){
   const tray=$('attachTray');tray.innerHTML='';
-  if(!S.pendingFiles.length){tray.classList.remove('has-files');return;}
+  if(!S.pendingFiles.length){tray.classList.remove('has-files');updateSendBtn();return;}
   tray.classList.add('has-files');
+  updateSendBtn();
   S.pendingFiles.forEach((f,i)=>{
     const chip=document.createElement('div');chip.className='attach-chip';
     chip.innerHTML=`&#128206; ${esc(f.name)} <button title="Remove">&#10005;</button>`;

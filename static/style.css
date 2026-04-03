@@ -193,10 +193,12 @@
   .mic-status{font-size:11px;color:#e94560;padding:4px 12px;display:flex;align-items:center;gap:6px;}
   .mic-dot{width:6px;height:6px;border-radius:50%;background:#e94560;animation:mic-pulse 1.2s ease-in-out infinite;flex-shrink:0;}
   .status-text{font-size:11px;color:var(--muted);padding-left:4px;}
-  .send-btn{padding:7px 18px;border-radius:10px;font-size:13px;font-weight:600;background:linear-gradient(135deg,#5ba8f5,#7cb9ff);border:none;color:#0a1628;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s;flex-shrink:0;letter-spacing:.01em;}
-  .send-btn:hover{background:linear-gradient(135deg,#7cb9ff,#a0d0ff);transform:translateY(-1px);}
-  .send-btn:active{transform:translateY(0);}
-  .send-btn:disabled{opacity:.4;cursor:not-allowed;}
+  .send-btn{width:34px;height:34px;border-radius:50%;background:#7cb9ff;border:none;color:#0a1628;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,transform .15s,box-shadow .15s;box-shadow:0 2px 8px rgba(124,185,255,.35);}
+  .send-btn:hover{background:#a0d0ff;transform:scale(1.08);box-shadow:0 4px 14px rgba(124,185,255,.5);}
+  .send-btn:active{transform:scale(0.95);box-shadow:0 1px 4px rgba(124,185,255,.25);}
+  .send-btn:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none;}
+  .send-btn.visible{animation:send-pop-in .18s cubic-bezier(.34,1.56,.64,1) forwards;}
+  @keyframes send-pop-in{from{opacity:0;transform:scale(.55);}to{opacity:1;transform:scale(1);}}
   .upload-bar-wrap{display:none;height:3px;background:rgba(255,255,255,.06);border-radius:0 0 16px 16px;overflow:hidden;}
   .upload-bar-wrap.active{display:block;}
   .upload-bar{height:100%;background:linear-gradient(90deg,var(--blue),#a0d0ff);width:0%;transition:width .3s ease;}
@@ -276,7 +278,7 @@
     .composer-wrap{padding:8px 10px 12px!important;}
     .composer-box{border-radius:12px;}
     .composer-box textarea{font-size:16px;min-height:40px;}
-    .send-btn{padding:6px 14px;font-size:13px;}
+    .send-btn{width:32px;height:32px;}
     /* Empty state */
     .empty-state h2{font-size:18px;}
     .empty-state p{font-size:13px;}

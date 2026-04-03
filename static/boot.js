@@ -145,6 +145,7 @@ $('modelSelect').onchange=async()=>{
 };
 $('msg').addEventListener('input',()=>{
   autoResize();
+  updateSendBtn();
   const text=$('msg').value;
   if(text.startsWith('/')&&text.indexOf('\n')===-1){
     const prefix=text.slice(1);
