@@ -1,5 +1,11 @@
 # Hermes Web UI -- Changelog
 
+## [v0.50.91] — 2026-04-19
+
+### Added
+- **Slash command parity with hermes-agent** — `/retry`, `/undo`, `/stop`, `/title`, `/status`, `/voice` commands now work in the Web UI, matching gateway behaviour. New `GET /api/commands` endpoint and `api/session_ops.py` backend. (PR #618 by @renheqiang)
+- **Skills appear in `/` autocomplete** — the composer slash-command dropdown now surfaces Hermes skills from `/api/skills`. Skill entries show a `Skill` badge and are ranked below built-ins on collisions. (PR #701 by @franksong2702)
+
 ## [v0.50.87] — 2026-04-18
 
 ### Fixed
