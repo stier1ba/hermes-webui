@@ -1357,6 +1357,25 @@ function _compressionReferenceCardHtml(text, open=false){
       
     </div>`;
 }
+function _isSameLocalDay(dateA, dateB){
+  return dateA.getFullYear()===dateB.getFullYear()
+    && dateA.getMonth()===dateB.getMonth()
+    && dateA.getDate()===dateB.getDate();
+}
+function _formatMessageFooterTimestamp(tsVal){
+  if(!tsVal) return '';
+  const date=new Date(tsVal*1000);
+  const now=new Date();
+  if(_isSameLocalDay(date, now)){
+    return date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  }
+  return date.toLocaleString([], {
+    month:'short',
+    day:'numeric',
+    hour:'numeric',
+    minute:'2-digit',
+  });
+}
 function _compressionStatusCardHtml({
   statusLabel,
   previewText,
@@ -1503,9 +1522,9 @@ function renderMessages(){
     const copyBtn  = `<button class="msg-copy-btn msg-action-btn" title="${t('copy')}" onclick="copyMsg(this)">${li('copy',13)}</button>`;
     const tsVal=m._ts||m.timestamp;
     const tsTitle=tsVal?new Date(tsVal*1000).toLocaleString():'';
-    const tsTime=tsVal?new Date(tsVal*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
-    const userTimeHtml = (isUser && tsTime) ? `<span class="msg-time" title="${esc(tsTitle)}">${tsTime}</span>` : '';
-    const footHtml = `<div class="msg-foot">${userTimeHtml}<span class="msg-actions">${editBtn}${copyBtn}${retryBtn}</span></div>`;
+    const tsTime=_formatMessageFooterTimestamp(tsVal);
+    const timeHtml = tsTime ? `<span class="msg-time" title="${esc(tsTitle)}">${tsTime}</span>` : '';
+    const footHtml = `<div class="msg-foot">${timeHtml}<span class="msg-actions">${editBtn}${copyBtn}${retryBtn}</span></div>`;
 
     if(isUser){
       currentAssistantTurn=null;
@@ -1704,21 +1723,26 @@ function renderMessages(){
       if(anchorRow&&lastInsertedNode) anchorInsertAfter.set(anchorRow, lastInsertedNode);
     }
   }
-  // Render usage badge on the last assistant turn (if enabled and usage data exists)
+  // Render cumulative usage on the last assistant footer row (if enabled).
   if(window._showTokenUsage&&S.session&&(S.session.input_tokens||S.session.output_tokens)){
     const rows=inner.querySelectorAll('.assistant-turn');
     let lastAssist=null;
     for(let i=rows.length-1;i>=0;i--){lastAssist=rows[i];break;}
-    if(lastAssist&&!lastAssist.querySelector('.msg-usage')){
-      const usage=document.createElement('div');
-      usage.className='msg-usage';
-      const inTok=S.session.input_tokens||0;
-      const outTok=S.session.output_tokens||0;
-      const cost=S.session.estimated_cost;
-      let text=`${_fmtTokens(inTok)} in · ${_fmtTokens(outTok)} out`;
-      if(cost) text+=` · ~$${cost<0.01?cost.toFixed(4):cost.toFixed(2)}`;
-      usage.textContent=text;
-      _assistantTurnBlocks(lastAssist).appendChild(usage);
+    if(lastAssist){
+      const footerRows=lastAssist.querySelectorAll('.msg-foot');
+      const targetFoot=footerRows.length?footerRows[footerRows.length-1]:null;
+      if(targetFoot&&!targetFoot.querySelector('.msg-usage-inline')){
+        const usage=document.createElement('span');
+        usage.className='msg-usage-inline';
+        const inTok=S.session.input_tokens||0;
+        const outTok=S.session.output_tokens||0;
+        const cost=S.session.estimated_cost;
+        let text=`${_fmtTokens(inTok)} in · ${_fmtTokens(outTok)} out`;
+        if(cost) text+=` · ~$${cost<0.01?cost.toFixed(4):cost.toFixed(2)}`;
+        usage.textContent=text;
+        targetFoot.classList.add('msg-foot-with-usage');
+        targetFoot.insertBefore(usage, targetFoot.firstChild);
+      }
     }
   }
   // Only force-scroll when not actively streaming — mid-stream re-renders
