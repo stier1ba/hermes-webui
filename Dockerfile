@@ -25,9 +25,15 @@ RUN apt-get update -y --fix-missing --no-install-recommends \
     curl \
     rsync \
     openssh-client \
+    nodejs \
+    npm \
     && apt-get upgrade -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# npx-based MCP servers, such as Pinecone, need Node tooling available inside
+# the WebUI container where WebUI-launched agent sessions run.
+RUN node --version && npm --version && npx --version
 
 # UTF-8
 RUN localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
@@ -93,4 +99,3 @@ ENV HERMES_WEBUI_PORT=8787
 EXPOSE 8787
 
 CMD ["/hermeswebui_init.bash"]
-
