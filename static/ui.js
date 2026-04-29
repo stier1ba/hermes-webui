@@ -689,6 +689,30 @@ function _syncCtxIndicator(usage){
   }
 }
 
+// ── Touch support: toggle context tooltip on tap (#524) ──
+// On mobile, hover doesn't work — allow tap on the context ring button
+// to toggle the tooltip visibility so the compress affordance is reachable.
+document.addEventListener('DOMContentLoaded',function(){
+  const wrap=document.getElementById('ctxIndicatorWrap');
+  const tooltip=document.getElementById('ctxTooltip');
+  if(!wrap||!tooltip)return;
+  const btn=document.getElementById('ctxIndicator');
+  if(!btn)return;
+  btn.addEventListener('click',function(e){
+    e.stopPropagation();
+    const isOpen=tooltip.classList.contains('ctx-tooltip-active');
+    tooltip.classList.toggle('ctx-tooltip-active',!isOpen);
+    tooltip.setAttribute('aria-hidden',String(isOpen));
+  });
+  // Close on outside tap
+  document.addEventListener('click',function(){
+    tooltip.classList.remove('ctx-tooltip-active');
+    tooltip.setAttribute('aria-hidden','true');
+  },{passive:true});
+  // Prevent tooltip click from closing itself
+  tooltip.addEventListener('click',function(e){e.stopPropagation();});
+});
+
 function scrollIfPinned(){
   if(!_scrollPinned) return;
   const el=$('messages');
