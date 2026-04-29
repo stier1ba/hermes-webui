@@ -99,6 +99,9 @@ class Handler(BaseHTTPRequestHandler):
         finally:
             clear_request_profile()
 
+    do_PUT = do_POST
+    do_DELETE = do_POST
+
 
 def main() -> None:
     from api.config import print_startup_config, verify_hermes_imports, _HERMES_FOUND

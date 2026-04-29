@@ -773,6 +773,10 @@ def handle_get(handler, parsed) -> bool:
     if parsed.path == "/api/providers":
         return j(handler, get_providers())
 
+    # ── MCP Servers (GET) ──
+    if parsed.path == "/api/mcp/servers":
+        return _handle_mcp_servers_list(handler)
+
     if parsed.path == "/api/settings":
         settings = load_settings()
         # Never expose the stored password hash to clients
@@ -1632,10 +1636,7 @@ def handle_post(handler, parsed) -> bool:
     if parsed.path == "/api/workspaces/reorder":
         return _handle_workspace_reorder(handler, body)
 
-    # ── MCP Servers ──
-    if parsed.path == "/api/mcp/servers":
-        return _handle_mcp_servers_list(handler)
-
+    # ── MCP Servers (PUT/DELETE) ──
     if parsed.path.startswith("/api/mcp/servers/") and parsed.path.count("/") == 4:
         # DELETE /api/mcp/servers/<name>
         name = parsed.path.split("/")[-1]

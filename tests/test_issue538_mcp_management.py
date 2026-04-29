@@ -1,7 +1,9 @@
 """Tests for issue #538 — MCP server management API."""
 import json, pytest
+from urllib.parse import urlparse
 from unittest.mock import patch, MagicMock, call
 from api.routes import (
+    handle_get,
     _handle_mcp_servers_list,
     _handle_mcp_server_update,
     _handle_mcp_server_delete,
@@ -53,6 +55,14 @@ class TestMcpList:
         status = h.send_response.call_args[0][0]
         assert status == 200
 
+    @patch('api.routes.get_config')
+    def test_get_route_lists_servers(self, mock_cfg):
+        mock_cfg.return_value = {'mcp_servers': SAMPLE_MCP}
+        h = _make_handler()
+        handled = handle_get(h, urlparse('/api/mcp/servers'))
+        assert handled is not False
+        assert h.send_response.call_args[0][0] == 200
+
     def test_secrets_are_masked(self):
         """_mask_secrets hides API keys in headers and env."""
         masked = _mask_secrets(SAMPLE_MCP['web-reader']['headers'])
@@ -78,6 +88,11 @@ class TestMcpList:
 
 class TestMcpSave:
     """PUT /api/mcp/servers/<name> — add or update."""
+
+    def test_http_handler_accepts_put_method(self):
+        from server import Handler
+
+        assert Handler.do_PUT is Handler.do_POST
 
     @patch('api.routes.reload_config')
     @patch('api.routes._save_yaml_config_file')
@@ -153,6 +168,11 @@ class TestMcpSave:
 
 class TestMcpDelete:
     """DELETE /api/mcp/servers/<name>."""
+
+    def test_http_handler_accepts_delete_method(self):
+        from server import Handler
+
+        assert Handler.do_DELETE is Handler.do_POST
 
     @patch('api.routes.reload_config')
     @patch('api.routes._save_yaml_config_file')
