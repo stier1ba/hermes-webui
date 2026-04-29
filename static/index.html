@@ -46,8 +46,17 @@
   <!-- PWA service worker registration -->
   <script>
     if ('serviceWorker' in navigator) {
+      var hadServiceWorkerController = !!navigator.serviceWorker.controller;
+      var serviceWorkerRefreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function() {
+        if (!hadServiceWorkerController || serviceWorkerRefreshing) return;
+        serviceWorkerRefreshing = true;
+        window.location.reload();
+      });
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('sw.js').catch(function(err) {
+        navigator.serviceWorker.register('sw.js').then(function(reg) {
+          if (reg && reg.update) reg.update().catch(function() {});
+        }).catch(function(err) {
           console.warn('[pwa] Service worker registration failed:', err);
         });
       });

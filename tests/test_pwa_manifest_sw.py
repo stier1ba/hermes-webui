@@ -3,6 +3,8 @@
 Covers:
 - manifest.json is valid JSON with required PWA fields
 - sw.js has the `__CACHE_VERSION__` placeholder the server replaces at request time
+- sw.js network-firsts the app shell so deployed JS/i18n updates are not hidden
+  behind an older service-worker cache
 - sw.js offline-fallback uses a resolved promise (not `caches.match() || fallback`
   which is broken — Promise objects are always truthy in `||` checks, so the
   fallback Response would never be used)
@@ -97,6 +99,17 @@ class TestServiceWorker:
             "SW fetch handler must early-return for /api/* paths (no caching)"
         )
 
+    def test_sw_uses_network_first_for_shell_assets(self):
+        """Static JS/i18n files must refresh after deploys, with cache as fallback."""
+        src = SW.read_text(encoding="utf-8")
+        assert "function networkFirst(request)" in src
+        assert "fetch(request)" in src
+        assert "cache.put(request, clone)" in src
+        assert "event.respondWith(networkFirst(event.request))" in src
+        assert "cache-first" not in src.lower(), (
+            "service worker should not describe or implement a cache-first shell strategy"
+        )
+
 
 class TestPWARoutes:
     def test_manifest_route_serves_correct_content_type(self):
@@ -133,6 +146,15 @@ class TestPWARoutes:
             "the expected scope"
         )
 
+    def test_index_route_versions_first_party_static_assets(self):
+        src = ROUTES.read_text(encoding="utf-8")
+        assert "_index_html_with_asset_version" in src
+        assert "WEBUI_VERSION" in src
+        assert "?v={version}" in src, (
+            "index route should append WEBUI_VERSION to first-party static assets "
+            "so stale service-worker/browser caches do not keep old JS bundles"
+        )
+
 
 class TestIndexHtmlIntegration:
     def test_index_links_manifest(self):
@@ -143,6 +165,14 @@ class TestIndexHtmlIntegration:
         src = INDEX.read_text(encoding="utf-8")
         assert "serviceWorker" in src and "register" in src, (
             "index.html must register the service worker"
+        )
+
+    def test_index_updates_service_worker_and_reloads_existing_clients(self):
+        src = INDEX.read_text(encoding="utf-8")
+        assert "reg.update" in src, "index.html should actively check for SW updates"
+        assert "controllerchange" in src and "window.location.reload" in src, (
+            "existing controlled tabs should reload once when a new service worker "
+            "takes over, so stale shell assets are replaced"
         )
 
     def test_index_has_ios_pwa_meta_tags(self):

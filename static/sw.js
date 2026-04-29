@@ -2,7 +2,8 @@
  * Hermes WebUI Service Worker
  * Minimal PWA service worker — enables "Add to Home Screen".
  * No offline caching of API responses (the UI requires a live backend).
- * Caches only static shell assets so the app shell loads fast on repeat visits.
+ * Caches static shell assets as an offline fallback while preferring fresh
+ * network responses so deploys do not leave users on stale JavaScript.
  */
 
 // Cache version is injected by the server at request time (routes.py /sw.js handler).
@@ -54,10 +55,37 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+function cacheFallback(request) {
+  return caches.match(request).then((cached) => {
+    if (cached) return cached;
+    const url = new URL(request.url);
+    url.search = '';
+    return caches.match(url.href);
+  });
+}
+
+function cacheResponse(request, response) {
+  if (
+    request.method === 'GET' &&
+    response &&
+    response.status === 200
+  ) {
+    const clone = response.clone();
+    caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+  }
+  return response;
+}
+
+function networkFirst(request) {
+  return fetch(request)
+    .then((response) => cacheResponse(request, response))
+    .catch(() => cacheFallback(request));
+}
+
 // Fetch strategy:
 // - API calls (/api/*, /stream) → always network (never cache)
-// - Shell assets → cache-first with network fallback
-// - Everything else → network-first, fall back to offline page
+// - Navigations and shell assets → network-first, cached fallback
+// - Everything else → network-first
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
@@ -73,35 +101,30 @@ self.addEventListener('fetch', (event) => {
     return; // let browser handle normally
   }
 
-  // Shell assets: cache-first
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      networkFirst(event.request).then((response) => response || caches.match('./').then((cached) => cached || new Response(
+        '<html><body style="font-family:sans-serif;padding:2rem;background:#1a1a1a;color:#ccc">' +
+        '<h2>You are offline</h2>' +
+        '<p>Hermes requires a server connection. Please check your network and try again.</p>' +
+        '</body></html>',
+        { headers: { 'Content-Type': 'text/html' } }
+      )))
+    );
+    return;
+  }
+
+  const isShellAsset = SHELL_ASSETS.some((asset) => {
+    const assetUrl = new URL(asset, self.location.href);
+    return assetUrl.pathname === url.pathname;
+  });
+
+  if (isShellAsset || url.pathname.startsWith('/static/')) {
+    event.respondWith(networkFirst(event.request));
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((response) => {
-        // Cache successful GET responses for shell assets
-        if (
-          event.request.method === 'GET' &&
-          response.status === 200
-        ) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        }
-        return response;
-      }).catch(() => {
-        // Offline fallback for navigation requests.
-        // Note: caches.match() returns a Promise (always truthy in a `||` check),
-        // so we must await/then to unwrap it — otherwise the `new Response(...)`
-        // branch is dead code and the browser falls back to its default offline page.
-        if (event.request.mode === 'navigate') {
-          return caches.match('./').then((cached) => cached || new Response(
-            '<html><body style="font-family:sans-serif;padding:2rem;background:#1a1a1a;color:#ccc">' +
-            '<h2>You are offline</h2>' +
-            '<p>Hermes requires a server connection. Please check your network and try again.</p>' +
-            '</body></html>',
-            { headers: { 'Content-Type': 'text/html' } }
-          ));
-        }
-      });
-    })
+    networkFirst(event.request)
   );
 });

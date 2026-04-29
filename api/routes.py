@@ -14,7 +14,7 @@ import threading
 import time
 import uuid
 from pathlib import Path
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, quote
 
 logger = logging.getLogger(__name__)
 
@@ -662,7 +662,7 @@ def handle_get(handler, parsed) -> bool:
     if parsed.path in ("/", "/index.html"):
         return t(
             handler,
-            _INDEX_HTML_PATH.read_text(encoding="utf-8"),
+            _index_html_with_asset_version(),
             content_type="text/html; charset=utf-8",
         )
 
@@ -2024,6 +2024,37 @@ def handle_post(handler, parsed) -> bool:
     return False  # 404
 
 # ── GET route helpers ─────────────────────────────────────────────────────────
+
+_INDEX_VERSIONED_STATIC_ASSETS = (
+    "static/style.css",
+    "static/i18n.js",
+    "static/icons.js",
+    "static/ui.js",
+    "static/workspace.js",
+    "static/terminal.js",
+    "static/sessions.js",
+    "static/commands.js",
+    "static/messages.js",
+    "static/panels.js",
+    "static/onboarding.js",
+    "static/boot.js",
+)
+
+
+def _index_html_with_asset_version() -> str:
+    """Return index.html with deploy-versioned first-party asset URLs."""
+    from api.updates import WEBUI_VERSION
+
+    version = quote(WEBUI_VERSION, safe="._-")
+    html = _INDEX_HTML_PATH.read_text(encoding="utf-8")
+    for asset in _INDEX_VERSIONED_STATIC_ASSETS:
+        html = html.replace(f'"{asset}"', f'"{asset}?v={version}"')
+    html = html.replace(
+        "from '/static/vendor/smd.min.js'",
+        f"from '/static/vendor/smd.min.js?v={version}'",
+    )
+    return html
+
 
 # MIME types for static file serving. Hoisted to module scope to avoid
 # rebuilding the dict on every request.
