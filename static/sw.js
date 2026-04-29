@@ -46,13 +46,20 @@ self.addEventListener('install', (event) => {
 // Activate: clean up old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))
-      )
-    )
+    caches.keys()
+      .then((keys) => {
+        const staleCaches = keys.filter((k) => k !== CACHE_NAME);
+        return Promise.all(staleCaches.map((k) => caches.delete(k)))
+          .then(() => staleCaches.length > 0);
+      })
+      .then((hadStaleCaches) => self.clients.claim().then(() => {
+        if (!hadStaleCaches) return undefined;
+        return self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+          .then((clients) => Promise.all(
+            clients.map((client) => client.navigate(client.url).catch(() => undefined))
+          ));
+      }))
   );
-  self.clients.claim();
 });
 
 function cacheFallback(request) {

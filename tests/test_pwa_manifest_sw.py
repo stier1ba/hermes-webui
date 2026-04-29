@@ -110,6 +110,12 @@ class TestServiceWorker:
             "service worker should not describe or implement a cache-first shell strategy"
         )
 
+    def test_sw_reload_clients_after_replacing_stale_shell_cache(self):
+        src = SW.read_text(encoding="utf-8")
+        assert "staleCaches.length > 0" in src
+        assert "self.clients.matchAll" in src
+        assert "client.navigate(client.url)" in src
+
 
 class TestPWARoutes:
     def test_manifest_route_serves_correct_content_type(self):
